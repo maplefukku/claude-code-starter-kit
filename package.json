@@ -1,6 +1,6 @@
 {
   "name": "claude-security-setup",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Interactive security setup skill for Claude Code - permissions deny-first, 3-layer hook guard, sandbox hardening, and more",
   "bin": {
     "claude-security-setup": "bin/cli.mjs"
