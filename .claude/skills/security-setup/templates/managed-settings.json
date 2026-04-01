@@ -1,0 +1,36 @@
+{
+  "disableBypassPermissionsMode": "disable",
+  "allowManagedPermissionRulesOnly": true,
+  "allowManagedHooksOnly": true,
+  "allowManagedMcpServersOnly": true,
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(curl * | bash*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Read(~/.aws/**)",
+      "Read(~/.ssh/**)",
+      "Read(**/.env*)",
+      "Edit(**/.env*)",
+      "Write(**/.env*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "network": {
+      "allowManagedDomainsOnly": true,
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "npmjs.org",
+        "registry.npmjs.org"
+      ]
+    },
+    "filesystem": {
+      "allowManagedReadPathsOnly": true
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "claude-code-secure",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/python:1": {},
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "updateRemoteUserUID": true,
+  "mounts": [],
+  "postCreateCommand": "echo 'Claude Code secure container ready'",
+  "customizations": {
+    "vscode": {
+      "extensions": []
+    }
+  },
+  "securityOpt": [
+    "no-new-privileges:true"
+  ]
+}

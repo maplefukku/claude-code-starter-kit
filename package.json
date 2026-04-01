@@ -1,0 +1,30 @@
+{
+  "name": "claude-security-setup",
+  "version": "1.0.0",
+  "description": "Interactive security setup skill for Claude Code - permissions deny-first, 3-layer hook guard, sandbox hardening, and more",
+  "bin": {
+    "claude-security-setup": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin/",
+    ".claude/skills/security-setup/"
+  ],
+  "type": "module",
+  "keywords": [
+    "claude-code",
+    "security",
+    "skill",
+    "hook-guard",
+    "permissions",
+    "sandbox"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maplefukku/claude-code-starter-kit.git"
+  }
+}

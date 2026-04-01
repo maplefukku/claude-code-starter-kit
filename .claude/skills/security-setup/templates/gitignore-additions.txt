@@ -1,0 +1,12 @@
+# === Claude Code Security: Sensitive files ===
+.env
+.env.*
+.env.local
+.env.production
+*.pem
+*.key
+*.secret
+credentials.json
+.claude/settings.local.json
+.claude/security-audit.log
+.docker/config.json

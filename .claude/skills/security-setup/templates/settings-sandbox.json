@@ -1,0 +1,32 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": ["git", "docker"],
+    "filesystem": {
+      "denyRead": [
+        "~/.*",
+        "/etc/**",
+        "~/.ssh/**",
+        "~/.aws/**",
+        "~/.gnupg/**",
+        "~/.kube/config",
+        "~/.docker/config.json",
+        "**/.env*",
+        "**/*.pem",
+        "**/*.key",
+        "**/credentials.json"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "npmjs.org",
+        "registry.npmjs.org",
+        "pypi.org",
+        "files.pythonhosted.org"
+      ]
+    }
+  }
+}
