@@ -8,11 +8,11 @@
  *   - PostToolUse (第3層): ツール出力のインジェクションパターン監視
  *
  * 設定方法:
- *   .claude/settings.json の hooks セクションに登録:
+ *   .claude/settings.json の hooks セクションに登録（matcher+hooks配列形式）:
  *   "hooks": {
- *     "UserPromptSubmit": [{"type": "command", "command": "node .claude/scripts/hook_guard.mjs"}],
- *     "PreToolUse": [{"type": "command", "command": "node .claude/scripts/hook_guard.mjs"}],
- *     "PostToolUse": [{"type": "command", "command": "node .claude/scripts/hook_guard.mjs"}]
+ *     "UserPromptSubmit": [{"matcher": "", "hooks": [{"type": "command", "command": "node .claude/scripts/hook_guard.mjs"}]}],
+ *     "PreToolUse": [{"matcher": "Bash|Read|Edit|Write|Grep|Glob", "hooks": [{"type": "command", "command": "node .claude/scripts/hook_guard.mjs"}]}],
+ *     "PostToolUse": [{"matcher": "Bash|Read|Edit|Write|Grep|Glob", "hooks": [{"type": "command", "command": "node .claude/scripts/hook_guard.mjs"}]}]
  *   }
  *
  * 入出力:
@@ -58,7 +58,7 @@ const DANGEROUS_RE = new RegExp(
   [
     String.raw`rm\s+-rf\s+[/~]`,
     String.raw`rm\s+-rf\s+\.\.`,
-    String.raw`rm\s+-rf\s+\.$`,
+    String.raw`rm\s+-rf\s+\.(?:\s|$|;|&|\|)`,
     String.raw`curl\s+.*\|\s*(ba)?sh`,
     String.raw`wget\s+.*\|\s*(ba)?sh`,
     String.raw`sudo\s+`,
@@ -80,7 +80,9 @@ const DANGEROUS_RE = new RegExp(
     String.raw`nohup\s+`,
     String.raw`crontab\s+`,
     String.raw`eval\s+`,
-    String.raw`base64\s+(-d|--decode)`,
+    String.raw`base64\s+(-[dD]|--decode)`,
+    String.raw`\b(ba)?sh\s+-c\s+`,
+    String.raw`\bzsh\s+-c\s+`,
   ].join("|"),
   "i"
 );
@@ -127,29 +129,25 @@ const INJECTION_RE = new RegExp(
     String.raw`new\s+instructions?\s*:`,
     String.raw`admin\s+override`,
     String.raw`act\s+as\s+(if\s+)?(you\s+)?(are|were)\s+`,
+    String.raw`\[SYSTEM\]\s*:?\s*(you|ignore|override|execute)`,
+    String.raw`^\s*Human:\s.*\b(ignore|override|bypass|disregard)\b`,
+    String.raw`^\s*Assistant:\s.*\b(ignore|override|bypass)\b`,
+    String.raw`CRITICAL:\s*(execute|ignore|override)`,
+    String.raw`DO\s+NOT\s+FOLLOW\s+(previous|prior|above|any)`,
     // 日本語パターン
     `前の指示を(無視|忘れ)`,
     `これまでの(指示|ルール|制約)を(無視|忘れ|破棄)`,
     `セキュリティ(設定|ルール|制約)を(無視|解除|無効)`,
     `権限を(上書き|オーバーライド|バイパス)`,
+    // 不可視Unicode文字（ゼロ幅スペース等）
+    String.raw`[\u200B\u200C\u200D\u2060\uFEFF]`,
+    // HTMLコメント内インジェクション
+    String.raw`<!--\s*(SYSTEM|IMPORTANT|IGNORE|OVERRIDE)`,
   ].join("|"),
   "i"
 );
 
-// --- 第3層: PostToolUse - 出力内インジェクションパターン ---
-const OUTPUT_INJECTION_RE = new RegExp(
-  [
-    String.raw`ignore\s+(all\s+)?(previous|prior)\s+instructions?`,
-    String.raw`you\s+must\s+now`,
-    String.raw`<\s*system\s*>`,
-    String.raw`IMPORTANT:\s*ignore`,
-    String.raw`new\s+instructions?\s*:`,
-    String.raw`admin\s+override`,
-    String.raw`override\s+(security|safety|permissions?)`,
-    `前の指示を(無視|忘れ)`,
-  ].join("|"),
-  "i"
-);
+// --- 第3層: PostToolUse - INJECTION_RE を共用（統一） ---
 
 // ============================================================
 // ヘルパー
@@ -232,7 +230,7 @@ function checkPostToolUse(data) {
 
   const parts = [];
   if (toolResponse && typeof toolResponse === "object") {
-    for (const key of ["output", "stdout", "content", "result"]) {
+    for (const key of ["output", "stdout", "stderr", "content", "result"]) {
       if (toolResponse[key]) parts.push(String(toolResponse[key]));
     }
   } else if (typeof toolResponse === "string") {
@@ -242,7 +240,7 @@ function checkPostToolUse(data) {
   const outputText = parts.join(" ");
   if (!outputText) return null;
 
-  const m = outputText.match(OUTPUT_INJECTION_RE);
+  const m = outputText.match(INJECTION_RE);
   if (m) {
     const warning =
       `WARNING: Potential prompt injection detected in tool output. ` +

@@ -35,29 +35,25 @@ allowed-tools:
 
 ---
 
-## Step 1: コアセキュリティ機能の選択
+## Step 1+2: セキュリティ機能の選択
 
-**AskUserQuestionツール**を使って、以下のように質問してください:
+**AskUserQuestionツール**を使って、以下の2つの質問を**1回のツール呼び出し**で同時に質問してください:
 
+### 質問1: コアセキュリティ
 - question: "どのコアセキュリティ機能を設定しますか？"
 - header: "Core"
 - multiSelect: true
 - options:
   1. label: "Permissions deny-first（推奨）"
-     description: "rm -rf、sudo、curl|bash、.envアクセス等50+の危険操作をdenyルールでブロック"
+     description: "「まず全部禁止、必要なものだけ許可」の方式。ファイル削除・管理者権限・怪しいスクリプト実行など60以上の危険な操作を自動でブロックします"
   2. label: "Hook Guard 3層防御（推奨）"
-     description: "プロンプトインジェクション検出・危険コマンド自動ブロック・出力監視をPythonスクリプトで実行"
+     description: "AIへの不正な指示（プロンプトインジェクション）の検出、危険コマンドの自動ブロック、出力の監視——この3つの防御をスクリプトで自動実行します"
   3. label: "Sandbox 強化"
-     description: "ファイルシステム・ネットワークをOSレベルで制限。allowedDomainsのカスタマイズ可能"
+     description: "ClaudeがアクセスできるフォルダやウェブサイトをOS（パソコンのシステム）レベルで制限します。許可するサイトの追加もできます"
   4. label: "Planモードデフォルト化"
-     description: "defaultMode: plan を設定。実行前に必ず計画を確認するモードをデフォルトに"
+     description: "Claudeがいきなりコードを変更せず、まず「何をするか」の計画を見せてくれるモードをデフォルトにします"
 
----
-
-## Step 2: 追加ハードニングの選択
-
-**AskUserQuestionツール**を使って、以下のように質問してください:
-
+### 質問2: 追加ハードニング
 - question: "追加のハードニングを選択してください"
 - header: "Hardening"
 - multiSelect: true
@@ -67,7 +63,7 @@ allowed-tools:
   2. label: ".gitignore 機密ファイル除外（推奨）"
      description: ".env*, *.pem, *.key, credentials.json, settings.local.json等をgitignoreに追加"
   3. label: "Telemetry OFF"
-     description: "環境変数 CLAUDE_CODE_ENABLE_TELEMETRY=0 を設定してテレメトリ送信を無効化"
+     description: "環境変数 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 を設定して非必須のネットワーク通信を無効化（注意: feature flag評価も無効化されるため一部機能に影響する場合あり）"
   4. label: "Bypass モード無効化"
      description: "disableBypassPermissionsMode を設定してbypassPermissionsモードの使用を禁止"
 
@@ -79,12 +75,12 @@ allowed-tools:
 
 **AskUserQuestionツール**で追加ドメインを確認してください:
 
-- question: "Sandbox のネットワーク制限に追加するドメインはありますか？デフォルト: github.com, api.github.com, npmjs.org, registry.npmjs.org, pypi.org, files.pythonhosted.org"
+- question: "Sandbox のネットワーク制限に追加するドメインはありますか？デフォルト: github.com, api.github.com, *.github.com, objects.githubusercontent.com, raw.githubusercontent.com, npmjs.org, registry.npmjs.org, pypi.org, files.pythonhosted.org"
 - header: "Domains"
 - multiSelect: false
 - options:
   1. label: "デフォルトのまま"
-     description: "上記6ドメインのみ許可"
+     description: "上記9ドメインのみ許可"
   2. label: "カスタマイズする"
      description: "追加したいドメインを入力（Other を選択して入力）"
 
@@ -96,10 +92,17 @@ allowed-tools:
 
 選択された項目に応じて以下を実行してください。
 
+### 4-0: バックアップ（既存設定がある場合）
+
+既存の `.claude/settings.json` がある場合は、変更前にバックアップを作成してください:
+- Readツールで `.claude/settings.json` を読み取り
+- Writeツールで `.claude/settings.json.bak` に同じ内容を書き込み
+- ユーザーに「既存設定を .claude/settings.json.bak にバックアップしました」と報告
+
 ### 4-1: settings.json の構築
 
 **重要なマージルール:**
-- 既存の `.claude/settings.json` がある場合は、Readツールで読み取る
+- 既存の `.claude/settings.json` がある場合は、Readツールで読み取る（4-0で既に読み取り済み）
 - 既存の permissions.deny 配列がある場合は、新しいルールを**追加**（重複は排除）
 - 既存の permissions.allow, hooks, sandbox 等の他のキーは**保持**
 - 既存にないキーのみ追加する
@@ -126,12 +129,12 @@ allowed-tools:
 - `"defaultMode": "plan"` を追加
 
 #### Telemetry OFF を選択した場合
-- `"env": { "CLAUDE_CODE_ENABLE_TELEMETRY": "0" }` を追加（既存envとマージ）
+- `"env": { "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1" }` を追加（既存envとマージ）
 
 #### Bypass モード無効化を選択した場合
-- `"disableBypassPermissionsMode": "disable"` を追加
+- `permissions` オブジェクト内に `"disableBypassPermissionsMode": "disable"` を追加
 
-最終的なJSONをWriteツールで `.claude/settings.json` に書き込んでください。
+**プレビュー:** 書き込み前に、最終的なJSONの内容をユーザーに表示し、「この内容で .claude/settings.json を更新します。よろしいですか？」とAskUserQuestionで確認してください。承認されたらWriteツールで `.claude/settings.json` に書き込んでください。
 
 ### 4-2: Hook Guard スクリプトのコピー（選択時のみ）
 
@@ -169,22 +172,28 @@ allowed-tools:
    claude.ai → Settings → Privacy → 「Help Improve Claude」をOFF
    → トレーニングデータへの利用を防止（30日保持に固定）
 
-2. managed-settings.json（チーム/企業向け）
+2. Claude Code 最低バージョン（重要）
+   CVE-2026-25725（sandbox escape）、CVE-2026-25724（symlink bypass）、
+   CVE-2026-33068（workspace trust bypass）対策のため v2.1.53以上を推奨。
+   claude --version で確認。
+
+3. managed-settings.json（チーム/企業向け）
    チーム全員に設定を強制するには managed-settings.json を配置:
    - macOS: /Library/Application Support/ClaudeCode/managed-settings.json
    - Linux: /etc/claude-code/managed-settings.json
    - Windows: C:\Program Files\ClaudeCode\managed-settings.json
    テンプレート: .claude/skills/security-setup/templates/managed-settings.json
+   ※ managed-settings.d/ ディレクトリにポリシーファイルを分割配置も可能
 
-3. devcontainer（隔離環境）
+4. devcontainer（隔離環境）
    Docker/devcontainer での隔離実行を推奨。
    テンプレート: .claude/skills/security-setup/templates/devcontainer.json
 
-4. MCP サーバー制御
+5. MCP サーバー制御
    未使用のMCPサーバーは削除。必要なものだけ明示的に許可。
    /mcp で現在の状態を確認。
 
-5. 定期監査コマンド（週1推奨）
+6. 定期監査コマンド（週1推奨）
    - /permissions — 現在の全ルール一覧
    - /status — どの階層の設定が有効か確認
    - /hooks — 有効なHooks一覧

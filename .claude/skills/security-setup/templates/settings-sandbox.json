@@ -2,8 +2,12 @@
   "sandbox": {
     "enabled": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": ["git", "docker"],
+    "failIfUnavailable": true,
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": ["docker"],
     "filesystem": {
+      "allowRead": [],
+      "allowWrite": [],
       "denyRead": [
         "~/.*",
         "/etc/**",
@@ -16,12 +20,24 @@
         "**/*.pem",
         "**/*.key",
         "**/credentials.json"
+      ],
+      "denyWrite": [
+        ".claude/settings.json",
+        ".claude/settings.local.json",
+        "~/.claude/**",
+        "~/.ssh/**",
+        "~/.aws/**",
+        "~/.gnupg/**",
+        "~/.config/**"
       ]
     },
     "network": {
       "allowedDomains": [
         "github.com",
         "api.github.com",
+        "*.github.com",
+        "objects.githubusercontent.com",
+        "raw.githubusercontent.com",
         "npmjs.org",
         "registry.npmjs.org",
         "pypi.org",
